@@ -8,7 +8,7 @@ var redis = require('redis').createClient;
 var Adapter = require('socket.io-adapter');
 var Emitter = require('events').EventEmitter;
 var debug = require('debug')('socket.io-redis');
-var async = require('async');
+var Promise = require('bluebird');
 
 /**
  * Module exports.
@@ -71,18 +71,17 @@ function adapter(uri, opts){
     if (String.prototype.startsWith) {
       this.channelMatches = function (messageChannel, subscribedChannel) {
         return messageChannel.startsWith(subscribedChannel);
-      }
+      };
     } else { // Fallback to other impl for older Node.js
       this.channelMatches = function (messageChannel, subscribedChannel) {
         return messageChannel.substr(0, subscribedChannel.length) === subscribedChannel;
-      }
+      };
     }
     this.pubClient = pub;
     this.subClient = sub;
 
-    var self = this;
-    sub.subscribe(this.channel, function(err){
-      if (err) self.emit('error', err);
+    sub.subscribe(this.channel, (err) => {
+      if (err) this.emit('error', err);
     });
     sub.on(subEvent, this.onmessage.bind(this));
   }
@@ -138,7 +137,7 @@ function adapter(uri, opts){
       var chn = prefix + '#' + packet.nsp + '#';
       var msg = JSON.stringify([uid, packet, opts]);
       if (opts.rooms) {
-        opts.rooms.forEach(function(room) {
+        opts.rooms.map( (room) => {
           var chnRoom = chn + room + '#';
           pub.publish(chnRoom, msg);
         });
@@ -159,12 +158,11 @@ function adapter(uri, opts){
 
   Redis.prototype.add = function(id, room, fn){
     debug('adding %s to %s ', id, room);
-    var self = this;
     Adapter.prototype.add.call(this, id, room);
     var channel = prefix + '#' + this.nsp.name + '#' + room + '#';
-    sub.subscribe(channel, function(err){
+    sub.subscribe(channel, (err) => {
       if (err) {
-        self.emit('error', err);
+        this.emit('error', err);
         if (fn) fn(err);
         return;
       }
@@ -183,16 +181,15 @@ function adapter(uri, opts){
 
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
-
-    var self = this;
+    
     var hasRoom = this.rooms.hasOwnProperty(room);
     Adapter.prototype.del.call(this, id, room);
 
     if (hasRoom && !this.rooms[room]) {
       var channel = prefix + '#' + this.nsp.name + '#' + room + '#';
-      sub.unsubscribe(channel, function(err){
+      sub.unsubscribe(channel, (err) => {
         if (err) {
-          self.emit('error', err);
+          this.emit('error', err);
           if (fn) fn(err);
           return;
         }
@@ -214,7 +211,6 @@ function adapter(uri, opts){
   Redis.prototype.delAll = function(id, fn){
     debug('removing %s from all rooms', id);
 
-    var self = this;
     var rooms = this.sids[id];
 
     if (!rooms) {
@@ -222,17 +218,17 @@ function adapter(uri, opts){
       return;
     }
 
-    async.forEach(Object.keys(rooms), function(room, next){
-      self.del(id, room, next);
-    }, function(err){
-      if (err) {
-        self.emit('error', err);
+    Promise.map( Object.keys(rooms), (room) => {
+        this.del(id, room, () => {
+                    delete this.sids[id];
+                    if (fn) fn(null);
+                });
+    }, { concurrency: Infinity })
+    .catch( (err) => {
+        this.emit('error', err);
         if (fn) fn(err);
-        return;
-      }
-      delete self.sids[id];
-      if (fn) fn(null);
     });
+
   };
 
   Redis.uid = uid;
