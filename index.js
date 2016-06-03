@@ -5,7 +5,6 @@
 
 var uid2 = require('uid2');
 var redis = require('redis').createClient;
-var msgpack = require('msgpack-js');
 var Adapter = require('socket.io-adapter');
 var Emitter = require('events').EventEmitter;
 var debug = require('debug')('socket.io-redis');
@@ -54,7 +53,7 @@ function adapter(uri, opts){
   if (!sub) sub = createClient({ return_buffers: true });
 
   // this server's key
-  var uid = uid2(6);
+  var uid = opts.uid2 ? uid2(opts.uid2) : uid2(6);
 
   /**
    * Adapter constructor.
@@ -104,7 +103,7 @@ function adapter(uri, opts){
     if (!this.channelMatches(channel.toString(), this.channel)) {
       return debug('ignore different channel');
     }
-    var args = msgpack.decode(msg);
+    var args = JSON.parse(msg);
     var packet;
 
     if (uid == args.shift()) return debug('ignore same uid');
@@ -137,7 +136,7 @@ function adapter(uri, opts){
     Adapter.prototype.broadcast.call(this, packet, opts);
     if (!remote) {
       var chn = prefix + '#' + packet.nsp + '#';
-      var msg = msgpack.encode([uid, packet, opts]);
+      var msg = JSON.stringify([uid, packet, opts]);
       if (opts.rooms) {
         opts.rooms.forEach(function(room) {
           var chnRoom = chn + room + '#';
