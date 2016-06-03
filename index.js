@@ -103,11 +103,7 @@ function adapter(uri, opts){
       return debug('ignore different channel');
     }
     var args = JSON.parse(msg);
-    var packet;
-
-    if (uid == args.shift()) return debug('ignore same uid');
-
-    packet = args[0];
+    var packet = args[0];
 
     if (packet && packet.nsp === undefined) {
       packet.nsp = '/';
