@@ -97,7 +97,7 @@ function adapter(uri, opts){
       return debug('ignore different channel');
     }
     var args = JSON.parse(msg);
-    var packet = args[0];
+    var packet = args[1];
 
     if (packet && packet.nsp === undefined) {
       packet.nsp = '/';
@@ -128,7 +128,7 @@ function adapter(uri, opts){
     newPacket.type = packet.type;
     if (!remote) {
       var chn = this.prefix + '#' + newPacket.nsp + '#';
-      var msg = JSON.stringify([newPacket, opts]);
+      var msg = JSON.stringify([uid, newPacket, opts]);
       if (opts.rooms) {
         opts.rooms.map( (room) => {
           var chnRoom = chn + room + '#';
