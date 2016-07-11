@@ -1,4 +1,4 @@
-
+'use strict';
 /**
  * Module dependencies.
  */
@@ -50,7 +50,7 @@ function adapter(uri, opts){
   }
   
   if (!pub) pub = createClient();
-  if (!sub) sub = createClient({ return_buffers: true });
+  if (!sub) sub = createClient({ return_buffers: false });
 
   // this server's key
   var uid = opts.uid2 ? uid2(opts.uid2) : uid2(6);
@@ -68,15 +68,9 @@ function adapter(uri, opts){
     this.uid = uid;
     this.prefix = prefix;
     this.channel = prefix + '#' + nsp.name + '#';
-    if (String.prototype.startsWith) {
-      this.channelMatches = function (messageChannel, subscribedChannel) {
-        return messageChannel.startsWith(subscribedChannel);
-      };
-    } else { // Fallback to other impl for older Node.js
-      this.channelMatches = function (messageChannel, subscribedChannel) {
-        return messageChannel.substr(0, subscribedChannel.length) === subscribedChannel;
-      };
-    }
+    this.channelMatches = function (messageChannel, subscribedChannel) {
+      return messageChannel.startsWith(subscribedChannel);
+    };
     this.pubClient = pub;
     this.subClient = sub;
 
@@ -128,10 +122,13 @@ function adapter(uri, opts){
    */
 
   Redis.prototype.broadcast = function(packet, opts, remote){
+    var newPacket = Object.assign({}, packet);
     Adapter.prototype.broadcast.call(this, packet, opts);
+    newPacket.nsp = packet.nsp;
+    newPacket.type = packet.type;
     if (!remote) {
-      var chn = prefix + '#' + packet.nsp + '#';
-      var msg = JSON.stringify([uid, packet, opts]);
+      var chn = this.prefix + '#' + newPacket.nsp + '#';
+      var msg = JSON.stringify([newPacket, opts]);
       if (opts.rooms) {
         opts.rooms.map( (room) => {
           var chnRoom = chn + room + '#';
@@ -155,7 +152,7 @@ function adapter(uri, opts){
   Redis.prototype.add = function(id, room, fn){
     debug('adding %s to %s ', id, room);
     Adapter.prototype.add.call(this, id, room);
-    var channel = prefix + '#' + this.nsp.name + '#' + room + '#';
+    var channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
     sub.subscribe(channel, (err) => {
       if (err) {
         this.emit('error', err);
@@ -178,11 +175,11 @@ function adapter(uri, opts){
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
     
-    var hasRoom = this.rooms.hasOwnProperty(room);
+    var hasRoom = Object.keys(this.rooms).includes(room);// this.rooms.hasOwnProperty(room);
     Adapter.prototype.del.call(this, id, room);
 
     if (hasRoom && !this.rooms[room]) {
-      var channel = prefix + '#' + this.nsp.name + '#' + room + '#';
+      var channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
       sub.unsubscribe(channel, (err) => {
         if (err) {
           this.emit('error', err);
