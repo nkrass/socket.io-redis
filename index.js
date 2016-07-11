@@ -53,7 +53,7 @@ function adapter(uri, opts){
   if (!sub) sub = createClient({ return_buffers: false });
 
   // this server's key
-  var uid = opts.uid2 ? uid2(opts.uid2) : uid2(6);
+  var uid = opts.uid2 ? opts.uid2 : uid2(6);
 
   /**
    * Adapter constructor.
