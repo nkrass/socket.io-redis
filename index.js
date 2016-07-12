@@ -3,12 +3,12 @@
  * Module dependencies.
  */
 
-var uid2 = require('uid2');
-var redis = require('redis').createClient;
-var Adapter = require('socket.io-adapter');
-var Emitter = require('events').EventEmitter;
-var debug = require('debug')('socket.io-redis');
-var Promise = require('bluebird');
+const uid2 = require('uid2');
+const redis = require('redis').createClient;
+const Adapter = require('socket.io-adapter');
+const Emitter = require('events').EventEmitter;
+const debug = require('debug')('socket.io-redis');
+const Promise = require('bluebird');
 
 /**
  * Module exports.
@@ -34,26 +34,17 @@ function adapter(uri, opts){
   }
 
   // opts
-  var pub = opts.pubClient;
-  var sub = opts.subClient;
-  var prefix = opts.key || 'socket.io';
-  var subEvent = opts.subEvent || 'message';
+  const pub = opts.pubClient;
+  const sub = opts.subClient;
+  const prefix = opts.key || 'socket.io';
+  const subEvent = opts.subEvent || 'message';
 
-  // init clients if needed
-  function createClient(redis_opts) {
-    if (uri) {
-      // handle uri string
-      return redis(uri, redis_opts);
-    } else {
-      return redis(opts.port, opts.host, redis_opts);
-    }
-  }
   
-  if (!pub) pub = createClient();
-  if (!sub) sub = createClient({ return_buffers: false });
+  if (!pub) throw new Error([" No Pub specified"]);
+  if (!sub) throw new Error([" No Sub specified"]);
 
   // this server's key
-  var uid = opts.uid2 ? opts.uid2 : uid2(6);
+  const uid = opts.uid2 ? uid2(opts.uid2) : uid2(6);
 
   /**
    * Adapter constructor.
@@ -68,9 +59,7 @@ function adapter(uri, opts){
     this.uid = uid;
     this.prefix = prefix;
     this.channel = prefix + '#' + nsp.name + '#';
-    this.channelMatches = function (messageChannel, subscribedChannel) {
-      return messageChannel.startsWith(subscribedChannel);
-    };
+    this.channelMatches = (messageChannel, subscribedChannel) => messageChannel.startsWith(subscribedChannel); 
     this.pubClient = pub;
     this.subClient = sub;
 
@@ -96,8 +85,11 @@ function adapter(uri, opts){
     if (!this.channelMatches(channel.toString(), this.channel)) {
       return debug('ignore different channel');
     }
-    var args = JSON.parse(msg);
-    var packet = args[1];
+    const args = JSON.parse(msg);
+    
+    if (uid == args.shift()) return debug('ignore same uid');
+    
+    const packet = args[0];
 
     if (packet && packet.nsp === undefined) {
       packet.nsp = '/';
@@ -106,9 +98,8 @@ function adapter(uri, opts){
     if (!packet || packet.nsp != this.nsp.name) {
       return debug('ignore different namespace');
     }
-
     args.push(true);
-
+    
     this.broadcast.apply(this, args);
   };
 
@@ -122,16 +113,16 @@ function adapter(uri, opts){
    */
 
   Redis.prototype.broadcast = function(packet, opts, remote){
-    var newPacket = Object.assign({}, packet);
+    const newPacket = Object.assign({}, packet);
     Adapter.prototype.broadcast.call(this, packet, opts);
     newPacket.nsp = packet.nsp;
     newPacket.type = packet.type;
     if (!remote) {
-      var chn = this.prefix + '#' + newPacket.nsp + '#';
-      var msg = JSON.stringify([uid, newPacket, opts]);
+      const chn = this.prefix + '#' + newPacket.nsp + '#';
+      const msg = JSON.stringify([uid, newPacket, opts]);
       if (opts.rooms) {
         opts.rooms.map( (room) => {
-          var chnRoom = chn + room + '#';
+          const chnRoom = chn + room + '#';
           pub.publish(chnRoom, msg);
         });
       } else {
@@ -152,7 +143,7 @@ function adapter(uri, opts){
   Redis.prototype.add = function(id, room, fn){
     debug('adding %s to %s ', id, room);
     Adapter.prototype.add.call(this, id, room);
-    var channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
+    const channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
     sub.subscribe(channel, (err) => {
       if (err) {
         this.emit('error', err);
@@ -175,11 +166,11 @@ function adapter(uri, opts){
   Redis.prototype.del = function(id, room, fn){
     debug('removing %s from %s', id, room);
     
-    var hasRoom = Object.keys(this.rooms).includes(room);// this.rooms.hasOwnProperty(room);
+    const hasRoom = Object.keys(this.rooms).includes(room);// this.rooms.hasOwnProperty(room);
     Adapter.prototype.del.call(this, id, room);
 
     if (hasRoom && !this.rooms[room]) {
-      var channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
+      const channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
       sub.unsubscribe(channel, (err) => {
         if (err) {
           this.emit('error', err);
@@ -204,7 +195,7 @@ function adapter(uri, opts){
   Redis.prototype.delAll = function(id, fn){
     debug('removing %s from all rooms', id);
 
-    var rooms = this.sids[id];
+    const rooms = this.sids[id];
 
     if (!rooms) {
       if (fn) process.nextTick(fn.bind(null, null));
