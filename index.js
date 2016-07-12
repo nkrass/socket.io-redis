@@ -4,7 +4,6 @@
  */
 
 const uid2 = require('uid2');
-const redis = require('redis').createClient;
 const Adapter = require('socket.io-adapter');
 const Emitter = require('events').EventEmitter;
 const debug = require('debug')('socket.io-redis');
