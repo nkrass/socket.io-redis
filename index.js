@@ -6,7 +6,6 @@
 const uid2 = require('uid2');
 const Adapter = require('socket.io-adapter');
 const Emitter = require('events').EventEmitter;
-const debug = require('debug')('socket.io-redis');
 const Promise = require('bluebird');
 
 /**
@@ -82,11 +81,11 @@ function adapter(uri, opts){
 
   Redis.prototype.onmessage = function(channel, msg){
     if (!this.channelMatches(channel.toString(), this.channel)) {
-      return debug('ignore different channel');
+      return;
     }
     const args = JSON.parse(msg);
     
-    if (uid == args.shift()) return debug('ignore same uid');
+    if (uid == args.shift()) return;
     
     const packet = args[0];
 
@@ -95,7 +94,7 @@ function adapter(uri, opts){
     }
 
     if (!packet || packet.nsp != this.nsp.name) {
-      return debug('ignore different namespace');
+        return;
     }
     args.push(true);
     
@@ -140,7 +139,6 @@ function adapter(uri, opts){
    */
 
   Redis.prototype.add = function(id, room, fn){
-    debug('adding %s to %s ', id, room);
     Adapter.prototype.add.call(this, id, room);
     const channel = this.prefix + '#' + this.nsp.name + '#' + room + '#';
     sub.subscribe(channel, (err) => {
@@ -163,8 +161,6 @@ function adapter(uri, opts){
    */
 
   Redis.prototype.del = function(id, room, fn){
-    debug('removing %s from %s', id, room);
-    
     const hasRoom = Object.keys(this.rooms).includes(room);// this.rooms.hasOwnProperty(room);
     Adapter.prototype.del.call(this, id, room);
 
@@ -192,8 +188,6 @@ function adapter(uri, opts){
    */
 
   Redis.prototype.delAll = function(id, fn){
-    debug('removing %s from all rooms', id);
-
     const rooms = this.sids[id];
 
     if (!rooms) {
