@@ -11,13 +11,12 @@
   },
   "dependencies": {
     "bluebird": "^3.4.0",
-    "debug": "2.2.0",
     "redis": "^2.6.1",
-    "socket.io-adapter": "0.4.0",
+    "socket.io-adapter": "https://github.com/nkrass/socket.io-adapter",
     "uid2": "0.0.3"
   },
   "devDependencies": {
-    "socket.io": "socketio/socket.io",
+    "socket.io": "https://github.com/nkrass/socket.io",
     "socket.io-client": "socketio/socket.io-client",
     "mocha": "1.18.0",
     "expect.js": "0.3.1"
