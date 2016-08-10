@@ -5,7 +5,7 @@
 
 const uid2 = require('uid2');
 const Adapter = require('socket.io-adapter');
-const Emitter = require('events').EventEmitter;
+const Emitter = require('events');
 const Promise = require('bluebird');
 
 /**
@@ -32,7 +32,7 @@ function adapter(opts = {}) {
    * @constructor 
    * @type {{new(*=): {onmessage: (function(String, String)), delAll: (function(String, Function)), add: (function(String, String, Function)), del: (function(String, String, Function)), broadcast: (function(Object, Object, Boolean))}}}
    */
-  const Redis = class extends Adapter {
+  const Redis = class Redis extends Adapter {
     constructor(nsp) {
       super(nsp);
       this.uid = uid;
