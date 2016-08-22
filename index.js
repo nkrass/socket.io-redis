@@ -53,22 +53,15 @@ function adapter(opts = {}) {
      * @api private
      */
     onmessage(channel, msg) {
-      if (!this.channelMatches(channel.toString(), this.channel)) {
-        return;
-      }
+      if (!this.channelMatches(channel.toString(), this.channel)) return;
       const args = JSON.parse(msg);
 
-      if (uid == args.shift()) return;
+      if (uid === args.shift()) return;
+      if (!args[0]) return; 
 
-      const packet = args[0];
-
-      if (packet && packet.nsp === undefined) {
-        packet.nsp = '/';
-      }
-
-      if (!packet || packet.nsp != this.nsp.name) {
-        return;
-      }
+      if (args[0].nsp === undefined) args[0].nsp = '/';
+      if (args[0].nsp !== this.nsp.name) return;
+      
       args.push(true);
 
       this.broadcast.apply(this, args);
@@ -156,7 +149,7 @@ function adapter(opts = {}) {
         if (fn) process.nextTick(fn.bind(null, null));
         return;
       }
-      const room_keys = Object.keys(rooms)
+      const room_keys = Object.keys(rooms);
       Promise.map(room_keys, (room) => {
         this.del(id, room, () => {
           delete this.sids[id];
@@ -169,7 +162,7 @@ function adapter(opts = {}) {
           });
 
     }
-  }
+  };
   Redis.uid = uid;
   Redis.pubClient = pub;
   Redis.subClient = sub;
